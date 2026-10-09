@@ -51,6 +51,8 @@ byte[,] map = new byte[mapWidth, mapHeight]{
   {4,4,4,4,4,4,4,4,4,4,1,1,1,2,2,2,2,2,2,3,3,3,3,3}
 };
 
+var cameraYPosition = 0;
+var maxCameraYPosition = 30;
 Vector2 player = new Vector2(1.1f, 1.1f);   // player position vector
 Vector2 dir = new Vector2(-1, 0);           // player direction of view
 Vector2 plane = new Vector2(0, 0.66f);      // perpendicular plane to direction of view
@@ -58,10 +60,12 @@ var originScreen = new Vector2(0, 0);       // 0,0 is bottom, left
 
 // var FOV = plane.Length() / dir.Length();
 
+Raylib.DisableCursor();
+
 while (!WindowShouldClose())
 {
     Array.Clear(buffer);
-    Array.Fill(buffer, Color.Black, 0, buffer.Length / 2);
+    Array.Fill(buffer, Color.DarkGray, 0, buffer.Length / 2);
     Array.Fill(buffer, Color.DarkGray, buffer.Length / 2, buffer.Length / 2);
     var dt = GetFrameTime();
     double rotSpeed = dt * 3.0;
@@ -79,7 +83,10 @@ while (!WindowShouldClose())
     else if (IsKeyDown(KeyboardKey.D))
         TryMove(new Vector2(dir.Y, -dir.X) * (float)moveSpeed, playerMovRadius);   // (x,y) rotate -90 = (y,-x)
 
-    if (IsKeyDown(KeyboardKey.Left))
+    Vector2 delta = Raylib.GetMouseDelta();
+
+    if (Math.Abs(delta.X) > 0.003f && delta.X < 0)
+    //if (IsKeyDown(KeyboardKey.Left))
     {
         double oldDirX = dir.X;
         dir.X = (float)(dir.X * Math.Cos(rotSpeed) - dir.Y * Math.Sin(rotSpeed));           // TODO check Transform and Quaternions
@@ -88,7 +95,8 @@ while (!WindowShouldClose())
         plane.X = (float)(plane.X * Math.Cos(rotSpeed) - plane.Y * Math.Sin(rotSpeed));
         plane.Y = (float)(oldPlaneX * Math.Sin(rotSpeed) + plane.Y * Math.Cos(rotSpeed));
     }
-    else if (IsKeyDown(KeyboardKey.Right))
+    else if (Math.Abs(delta.X) > 0.003f && delta.X > 0)
+    //else if (IsKeyDown(KeyboardKey.Right))
     {
         double oldDirX = dir.X;
         dir.X = (float)(dir.X * Math.Cos(-rotSpeed) - dir.Y * Math.Sin(-rotSpeed));
@@ -96,6 +104,19 @@ while (!WindowShouldClose())
         double oldPlaneX = plane.X;
         plane.X = (float)(plane.X * Math.Cos(-rotSpeed) - plane.Y * Math.Sin(-rotSpeed));
         plane.Y = (float)(oldPlaneX * Math.Sin(-rotSpeed) + plane.Y * Math.Cos(-rotSpeed));
+    }
+
+    //if (IsKeyDown(KeyboardKey.Up))
+    if (Math.Abs(delta.Y) > 0.003f && delta.Y < 0)
+    {
+        cameraYPosition += 1;
+        cameraYPosition = cameraYPosition > maxCameraYPosition ? maxCameraYPosition : cameraYPosition;
+    }
+    //else if (IsKeyDown(KeyboardKey.Down))
+    else if (Math.Abs(delta.Y) > 0.003f && delta.Y > 0)
+    {
+        cameraYPosition -= 1;
+        cameraYPosition = cameraYPosition < -maxCameraYPosition ? -maxCameraYPosition : cameraYPosition;
     }
 
     BeginDrawing();
@@ -186,9 +207,9 @@ while (!WindowShouldClose())
         if (side == 0) wallHeight = (sideDistX - deltaDistX); else wallHeight = (sideDistY - deltaDistY);
 
         int lineHeight = (int)(SCREEN_HEIGHT / wallHeight);
-        int wallStartPixel = -lineHeight / 2 + SCREEN_HEIGHT / 2;
+        int wallStartPixel = -lineHeight / 2 + SCREEN_HEIGHT / 2 + cameraYPosition;
         if (wallStartPixel < 0) wallStartPixel = 0;
-        int wallEndPixel = lineHeight / 2 + SCREEN_HEIGHT / 2;
+        int wallEndPixel = lineHeight / 2 + SCREEN_HEIGHT / 2 + cameraYPosition;
         if (wallEndPixel >= SCREEN_HEIGHT) wallEndPixel = SCREEN_HEIGHT;
 
         //Color wallColor = MapAt(mapX, mapY) switch
@@ -214,7 +235,7 @@ while (!WindowShouldClose())
         if (side == 1 && rayVector.Y < 0) textX = texW - textX - 1;
 
         double step = 1.0 * texH / lineHeight;
-        double texPos = (wallStartPixel - SCREEN_HEIGHT / 2 + lineHeight / 2) * step;
+        double texPos = (wallStartPixel - SCREEN_HEIGHT / 2 + lineHeight / 2 - cameraYPosition) * step;
 
         for (int i = wallStartPixel; i < wallEndPixel; i++)
         {
@@ -232,6 +253,7 @@ while (!WindowShouldClose())
 
     DrawVector(player, dir, Color.Yellow);
     DrawFPS(SCREEN_WIDTH - 120, 10);
+    DrawText($"x={cameraYPosition:F3} y={delta.Y:F3}", SCREEN_WIDTH - 100, 30, 12, Color.Green);
     //DrawText($"x={player.X:F3} y={player.Y:F3}", SCREEN_WIDTH - 100, 30, 12, Color.Green);
     EndDrawing();
 }

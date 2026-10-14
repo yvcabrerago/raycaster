@@ -12,28 +12,28 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="greystone.png">
+    <None Update="resources\greystone.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="BRICK_3B.PNG">
+    <None Update="resources\BRICK_3B.PNG">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="WARN_1A.PNG">
+    <None Update="resources\WARN_1A.PNG">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="CRATE_2C.PNG">
+    <None Update="resources\CRATE_2C.PNG">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="FLOOR_4A.PNG">
+    <None Update="resources\FLOOR_4A.PNG">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="SAND_1A.PNG">
+    <None Update="resources\SAND_1A.PNG">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="SLIME_1A.PNG">
+    <None Update="resources\SLIME_1A.PNG">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="coin.wav">
+    <None Update="resources\coin.wav">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

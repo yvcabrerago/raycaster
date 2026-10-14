@@ -19,21 +19,21 @@ const int mapHeight = 24;
 
 InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raycaster");
 InitAudioDevice();
-Sound sound = LoadSound("./coin.wav");
+Sound sound = LoadSound("./resources/coin.wav");
 //SetTargetFPS(60);
 //ToggleFullscreen();
 
 // buffer
 Color[] buffer = new Color[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
 Image image = GenImageColor(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, Color.SkyBlue);
-Image textureWall = LoadImage("./greystone.png");
-Image textureWall2 = LoadImage("./BRICK_3B.PNG");
-Image textureWall3 = LoadImage("./WARN_1A.PNG");
-Image textureWall4 = LoadImage("./CRATE_2C.PNG");
+Image textureWall = LoadImage("./resources/greystone.png");
+Image textureWall2 = LoadImage("./resources/BRICK_3B.PNG");
+Image textureWall3 = LoadImage("./resources/WARN_1A.PNG");
+Image textureWall4 = LoadImage("./resources/CRATE_2C.PNG");
 
-Image textureFloor3 = LoadImage("./SLIME_1A.PNG");
-Image textureFloor1 = LoadImage("./FLOOR_4A.PNG");
-Image textureFloor2 = LoadImage("./SAND_1A.PNG");
+Image textureFloor3 = LoadImage("./resources/SLIME_1A.PNG");
+Image textureFloor1 = LoadImage("./resources/FLOOR_4A.PNG");
+Image textureFloor2 = LoadImage("./resources/SAND_1A.PNG");
 Color[] textureColors1 = ToColorArray(textureFloor1);
 Color[] textureColors2 = ToColorArray(textureFloor2);
 Color[] textureColors3 = ToColorArray(textureFloor3);

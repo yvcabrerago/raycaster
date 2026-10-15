@@ -7,21 +7,26 @@ bool shouldRenderWalls = true;
 bool shouldRenderFloor = true;
 bool shouldRenderFog = true;
 
-const int SCREEN_WIDTH = 1024;
-const int SCREEN_HEIGHT = 720;
+const int SCREEN_WIDTH1 = 1920;
+const int SCREEN_HEIGHT1 = 720;
 
 
-const int VIEWPORT_WIDTH = 380;
+const int VIEWPORT_WIDTH = 320;
 const int VIEWPORT_HEIGHT = 240;
 
 const int mapWidth = 24;
 const int mapHeight = 24;
 
-InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raycaster");
+
+
+InitWindow(SCREEN_WIDTH1, SCREEN_HEIGHT1, "Raycaster");
 InitAudioDevice();
 Sound sound = LoadSound("./resources/coin.wav");
 //SetTargetFPS(60);
 //ToggleFullscreen();
+
+int SCREEN_WIDTH = GetScreenWidth();
+int SCREEN_HEIGHT = GetScreenHeight();
 
 // buffer
 Color[] buffer = new Color[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
@@ -42,7 +47,7 @@ int floorTexH = textureFloor2.Height;
 
 Texture2D texture = LoadTextureFromImage(image);
 UnloadImage(image);
-SetTextureFilter(texture, TextureFilter.Point);
+SetTextureFilter(texture, TextureFilter.Bilinear);
 
 const float maxDistanceFog = 7f;
 
@@ -93,6 +98,8 @@ Raylib.DisableCursor();
 // DEBUG vars
 double soundAttenuation = 0f;
 
+Vector2 automatedMove = dir;
+
 while (!WindowShouldClose())
 {
     Array.Clear(buffer);
@@ -105,6 +112,12 @@ while (!WindowShouldClose())
     if (IsKeyPressed(KeyboardKey.One)) shouldRenderFloor = !shouldRenderFloor;
     if (IsKeyPressed(KeyboardKey.Two)) shouldRenderWalls = !shouldRenderWalls;
     if (IsKeyPressed(KeyboardKey.Three)) shouldRenderFog = !shouldRenderFog;
+    if (IsKeyPressed(KeyboardKey.Four))
+    {
+        ToggleFullscreen();
+        SCREEN_WIDTH = GetScreenWidth();
+        SCREEN_HEIGHT = GetScreenHeight();
+    }
 
     float playerMovRadius = 0.25f; // don't allow the player to come too close to the walls
     Vector2 right = new Vector2(dir.Y, -dir.X);
@@ -114,23 +127,33 @@ while (!WindowShouldClose())
     if (IsKeyDown(KeyboardKey.A)) { toMove -= right; }
     if (IsKeyDown(KeyboardKey.D)) { toMove += right; }
 
-    if (toMove != Vector2.Zero)
+    
+    float turnSpeed = 2.0f; // radians per second
+
+    if (!TryMove(dir * (float)moveSpeed, playerMovRadius))
     {
-        TryMove(Vector2.Normalize(toMove) * (float)moveSpeed, playerMovRadius);
+        angle += turnSpeed * dt;
+        dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+        plane = new Vector2(dir.Y, -dir.X) * planeLen;
     }
+
+    //if (toMove != Vector2.Zero)
+    //{
+    //    TryMove(Vector2.Normalize(toMove) * (float)moveSpeed, playerMovRadius);
+    //}
 
     Vector2 delta = Raylib.GetMouseDelta();
 
-    angle -= delta.X * rotationSpeed;
-    dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-    plane = new Vector2(dir.Y, -dir.X) * planeLen;
+    //angle -= delta.X * rotationSpeed;
+    //dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+    //plane = new Vector2(dir.Y, -dir.X) * planeLen;
 
-    //if (IsKeyDown(KeyboardKey.Up))
-    if (delta.Y != 0)
-    {
-        cameraYPosition += -(int)delta.Y;
-        cameraYPosition = Math.Clamp(cameraYPosition, -maxCameraYPosition, maxCameraYPosition);
-    }
+    ////if (IsKeyDown(KeyboardKey.Up))
+    //if (delta.Y != 0)
+    //{
+    //    cameraYPosition += -(int)delta.Y;
+    //    cameraYPosition = Math.Clamp(cameraYPosition, -maxCameraYPosition, maxCameraYPosition);
+    //}
 
     UpdateSoundPosition();
     if (!IsSoundPlaying(sound)) PlaySound(sound);
@@ -145,7 +168,7 @@ while (!WindowShouldClose())
     }
     else
     {
-        Array.Clear(columnsPerRow);
+        //Array.Clear(columnsPerRow);
     }
 
     // raycasting
@@ -155,7 +178,7 @@ while (!WindowShouldClose())
     }
 
     UpdateTexture(texture, buffer);
-    DrawTexturePro(texture, new Rectangle(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT), new Rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), Vector2.Zero, 0f, Color.White);
+    DrawTexturePro(texture, new Rectangle(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT), new Rectangle(960 / 2, 0, VIEWPORT_WIDTH * 3, VIEWPORT_HEIGHT * 3), Vector2.Zero, 0f, Color.White);
 
     //DrawVector(player, dir, Color.Yellow);
     DrawFPS(SCREEN_WIDTH - 120, 10);
@@ -181,10 +204,10 @@ void UpdateSoundPosition()
     // need more realistic function and also add attenuation based on raycasting for wall inbetween
     // need code for sound pan
     var maxDistance = 8f;
-    Vector2 soundLocation = new Vector2(20,20);
+    Vector2 soundLocation = new Vector2(20, 20);
     var directDistance = (player - soundLocation).Length();
     soundDistance = directDistance;
-    float attenuation = 1-MathF.Pow(MathF.Min((float)directDistance, maxDistance) / maxDistance, 2);
+    float attenuation = 1 - MathF.Pow(MathF.Min((float)directDistance, maxDistance) / maxDistance, 2);
 
     soundAttenuation = attenuation;
     SetSoundVolume(sound, attenuation);
@@ -192,22 +215,27 @@ void UpdateSoundPosition()
 
 bool TryMove(Vector2 delta, float radius)
 {
-    var moved = false;
-    float edgeX = player.X + delta.X + Math.Sign(delta.X) * radius;
-    if (Free(edgeX, player.Y - radius) && Free(edgeX, player.Y + radius))
+    bool blocked = false;
+
+    if (delta.X != 0)
     {
-        player.X += delta.X;
-        moved = true;
+        float edgeX = player.X + delta.X + Math.Sign(delta.X) * radius;
+        if (Free(edgeX, player.Y - radius) && Free(edgeX, player.Y + radius))
+            player.X += delta.X;
+        else
+            blocked = true;
     }
 
-    float edgeY = player.Y + delta.Y + Math.Sign(delta.Y) * radius;
-    if (Free(player.X - radius, edgeY) && Free(player.X + radius, edgeY))
+    if (delta.Y != 0)
     {
-        player.Y += delta.Y;
-        moved = true;
+        float edgeY = player.Y + delta.Y + Math.Sign(delta.Y) * radius;
+        if (Free(player.X - radius, edgeY) && Free(player.X + radius, edgeY))
+            player.Y += delta.Y;
+        else
+            blocked = true;
     }
 
-    return moved;
+    return !blocked;
 }
 
 void RenderFloorAndCeiling()
@@ -236,7 +264,7 @@ void RenderFloorAndCeiling()
 
         Vector2 dist = new Vector2(floorX, floorY) - player;
 
-        Span <Color> row = buffer.AsSpan(start: y * VIEWPORT_WIDTH, length: VIEWPORT_WIDTH);
+        Span<Color> row = buffer.AsSpan(start: y * VIEWPORT_WIDTH, length: VIEWPORT_WIDTH);
         for (int x = 0; x < row.Length; x++)
         {
 

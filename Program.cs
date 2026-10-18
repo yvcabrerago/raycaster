@@ -6,35 +6,38 @@ using static Raylib_cs.Raylib;
 bool shouldRenderWalls = true;
 bool shouldRenderFloor = true;
 bool shouldRenderFog = true;
+bool shouldRenderSprites = true;
+bool shouldPlayAudioEffect = true;
 
-const int SCREEN_WIDTH1 = 1920;
-const int SCREEN_HEIGHT1 = 720;
-
-
+const int WINDOW_WIDTH = 320 * 3;
+const int WINDOW_HEIGHT = 720;
 const int VIEWPORT_WIDTH = 320;
 const int VIEWPORT_HEIGHT = 240;
 
-const int mapWidth = 24;
-const int mapHeight = 24;
-
-
-
-InitWindow(SCREEN_WIDTH1, SCREEN_HEIGHT1, "Raycaster");
+InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Raycaster");
 InitAudioDevice();
-Sound sound = LoadSound("./resources/coin.wav");
+DisableCursor();
 //SetTargetFPS(60);
 //ToggleFullscreen();
 
-int SCREEN_WIDTH = GetScreenWidth();
-int SCREEN_HEIGHT = GetScreenHeight();
+Sound sound = LoadSound("./resources/coin.wav");
+
+int ACTUAL_SCREEN_WIDTH = GetScreenWidth();
+int ACTUAL_SCREEN_HEIGHT = GetScreenHeight();
 
 // buffer
 Color[] buffer = new Color[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
-Image image = GenImageColor(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, Color.SkyBlue);
+Image canvasImage = GenImageColor(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, Color.Red);
+Texture2D texture = LoadTextureFromImage(canvasImage);
+UnloadImage(canvasImage);
+
+// TODO : add pipeline to load resource
 Image textureWall = LoadImage("./resources/greystone.png");
 Image textureWall2 = LoadImage("./resources/BRICK_3B.PNG");
-Image textureWall3 = LoadImage("./resources/WARN_1A.PNG");
+Image textureWall3 = LoadImage("./resources/SLIME_1A.PNG");//LoadImage("./resources/WARN_1A.PNG");
 Image textureWall4 = LoadImage("./resources/CRATE_2C.PNG");
+
+Image textureSprite1 = LoadImage("./resources/barrel.png");
 
 Image textureFloor3 = LoadImage("./resources/SLIME_1A.PNG");
 Image textureFloor1 = LoadImage("./resources/FLOOR_4A.PNG");
@@ -42,20 +45,18 @@ Image textureFloor2 = LoadImage("./resources/SAND_1A.PNG");
 Color[] textureColors1 = ToColorArray(textureFloor1);
 Color[] textureColors2 = ToColorArray(textureFloor2);
 Color[] textureColors3 = ToColorArray(textureFloor3);
-int floorTexW = textureFloor2.Width;
-int floorTexH = textureFloor2.Height;
+int floorTexW = 64;
+int floorTexH = 64;
 
-Texture2D texture = LoadTextureFromImage(image);
-UnloadImage(image);
 SetTextureFilter(texture, TextureFilter.Bilinear);
 
 const float maxDistanceFog = 7f;
-
 var fogColor = Color.Black;
 
 // TODO generate map using backtracking algo
-
-byte[,] map = new byte[mapWidth, mapHeight]{
+const int mapWidth = 24;
+const int mapHeight = 12;
+byte[,] map = new byte[mapHeight, mapWidth]{
   {4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,7,7,7,7,7,7,7,7},
   {4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,7},
   {4,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7},
@@ -64,39 +65,33 @@ byte[,] map = new byte[mapWidth, mapHeight]{
   {4,0,4,0,0,0,0,5,5,5,5,5,5,5,5,5,7,7,0,7,7,7,7,7},
   {4,0,5,0,0,0,0,5,0,5,0,5,0,5,0,5,7,0,0,0,7,7,7,1},
   {4,0,6,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,0,0,0,8},
-  {4,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,7,7,1},
+  {4,0,7,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,7,7,7,1},
   {4,0,8,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,0,0,0,8},
   {4,0,0,0,0,0,0,5,0,0,0,0,0,0,0,5,7,0,0,0,7,7,7,1},
-  {4,0,0,0,0,0,0,5,5,5,5,0,5,5,5,5,7,7,7,7,7,7,7,1},
-  {6,6,6,6,6,6,6,6,6,6,6,0,6,6,6,6,6,6,6,6,6,6,6,6},
-  {8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4},
-  {6,6,6,6,6,6,0,6,6,6,6,0,6,6,6,6,6,6,6,6,6,6,6,6},
-  {4,4,4,4,4,4,0,4,4,4,6,0,6,2,2,2,2,2,2,2,3,3,3,3},
-  {4,0,0,0,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,0,0,0,2},
-  {4,0,0,0,0,0,0,0,0,0,0,0,6,2,0,0,5,0,0,2,0,0,0,2},
-  {4,0,0,0,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,2,0,2,2},
-  {4,0,6,0,6,0,0,0,0,4,6,0,0,0,0,0,4,0,0,0,0,0,0,2},
-  {4,0,0,5,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,2,0,2,2},
-  {4,0,6,0,6,0,0,0,0,4,6,0,6,2,0,0,3,0,0,2,0,0,0,2},
-  {4,0,0,0,0,0,0,0,0,4,6,0,6,2,0,0,0,0,0,2,0,0,0,2},
-  {4,4,4,4,4,4,4,4,4,4,1,1,1,2,2,2,2,2,2,3,3,3,3,3}
+  {4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,7,7,7,7,7,7,7,7}
 };
 
+double[] perpendicularDistanceBuffer = new double[VIEWPORT_WIDTH];
 Vector2[] columnsPerRow = new Vector2[VIEWPORT_WIDTH];
 
 var cameraYPosition = 0;
 var maxCameraYPosition = VIEWPORT_HEIGHT / 4;
-Vector2 player = new Vector2(1.6f, 1.5f);   // player position vector
-Vector2 dir = new Vector2(-1, 0);           // player direction of view
-Vector2 plane = new Vector2(0, 0.66f);      // perpendicular plane to direction of view
+Vector2 player = new(1.6f, 1.5f);   // player position vector
+Vector2 dir = new(-1, 0);           // player direction of view
+Vector2 plane = new(0, 0.66f);      // perpendicular plane to direction of view
 float angle = MathF.PI;
 const float planeLen = 0.66f;
 float rotationSpeed = 0.002f;
 float soundDistance = 0f;
-Raylib.DisableCursor();
-
-// DEBUG vars
 double soundAttenuation = 0f;
+
+double textureOffsetCeiling = 0f;
+float textureOffsetWall = 0f;
+
+// sprites
+Vector2[] sprites = new Vector2[2];
+sprites[0] = new(20f, 10.5f);
+sprites[1] = new(21f, 10.5f);
 
 Vector2 automatedMove = dir;
 
@@ -105,7 +100,7 @@ while (!WindowShouldClose())
     Array.Clear(buffer);
     Array.Fill(buffer, Color.Red, 0, buffer.Length);
     var dt = GetFrameTime();
-    double moveSpeed = dt * 3.0;
+    double moveSpeed = dt * 3.0; // TODO extract into variable
 
     // update
     // TODO create console ?
@@ -115,11 +110,13 @@ while (!WindowShouldClose())
     if (IsKeyPressed(KeyboardKey.Four))
     {
         ToggleFullscreen();
-        SCREEN_WIDTH = GetScreenWidth();
-        SCREEN_HEIGHT = GetScreenHeight();
+        ACTUAL_SCREEN_WIDTH = GetScreenWidth();
+        ACTUAL_SCREEN_HEIGHT = GetScreenHeight();
     }
+    if (IsKeyPressed(KeyboardKey.Five)) shouldRenderSprites = !shouldRenderSprites;
+    if (IsKeyPressed(KeyboardKey.Six)) shouldPlayAudioEffect = !shouldPlayAudioEffect;
 
-    float playerMovRadius = 0.25f; // don't allow the player to come too close to the walls
+    float playerMovRadius = 0.25f; // don't allow the player to come too close to the walls TODO extract outside the loop
     Vector2 right = new Vector2(dir.Y, -dir.X);
     Vector2 toMove = Vector2.Zero;
     if (IsKeyDown(KeyboardKey.W)) { toMove += dir; }
@@ -127,36 +124,34 @@ while (!WindowShouldClose())
     if (IsKeyDown(KeyboardKey.A)) { toMove -= right; }
     if (IsKeyDown(KeyboardKey.D)) { toMove += right; }
 
-    
-    float turnSpeed = 2.0f; // radians per second
-
-    if (!TryMove(dir * (float)moveSpeed, playerMovRadius))
+    if (toMove != Vector2.Zero)
     {
-        angle += turnSpeed * dt;
-        dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-        plane = new Vector2(dir.Y, -dir.X) * planeLen;
+        TryMove(Vector2.Normalize(toMove) * (float)moveSpeed, playerMovRadius);
     }
 
-    //if (toMove != Vector2.Zero)
-    //{
-    //    TryMove(Vector2.Normalize(toMove) * (float)moveSpeed, playerMovRadius);
-    //}
+    // mouse movement
+    Vector2 delta = GetMouseDelta();
+    angle -= delta.X * rotationSpeed;
+    dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+    plane = new Vector2(dir.Y, -dir.X) * planeLen;
+    if (delta.Y != 0)
+    {
+        cameraYPosition += -(int)delta.Y;
+        cameraYPosition = Math.Clamp(cameraYPosition, -maxCameraYPosition, maxCameraYPosition);
+    }
 
-    Vector2 delta = Raylib.GetMouseDelta();
+    if (shouldPlayAudioEffect)
+    {
+        UpdateSoundPosition();
+        if (!IsSoundPlaying(sound)) PlaySound(sound);
+    }
+    else
+    {
+        StopSound(sound);
+    }
 
-    //angle -= delta.X * rotationSpeed;
-    //dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-    //plane = new Vector2(dir.Y, -dir.X) * planeLen;
-
-    ////if (IsKeyDown(KeyboardKey.Up))
-    //if (delta.Y != 0)
-    //{
-    //    cameraYPosition += -(int)delta.Y;
-    //    cameraYPosition = Math.Clamp(cameraYPosition, -maxCameraYPosition, maxCameraYPosition);
-    //}
-
-    UpdateSoundPosition();
-    if (!IsSoundPlaying(sound)) PlaySound(sound);
+    textureOffsetWall += dt * 0.5f; // TODO do I want texture animation ?
+    textureOffsetWall %= 1f;
 
     // drawing
     BeginDrawing();
@@ -168,43 +163,110 @@ while (!WindowShouldClose())
     }
     else
     {
-        //Array.Clear(columnsPerRow);
+        Array.Clear(columnsPerRow);
     }
 
-    // raycasting
     if (shouldRenderFloor)
     {
-        RenderFloorAndCeiling();
+        RenderFloorAndCeiling(dt);
+    }
+
+    if (shouldRenderSprites)
+    {
+        RenderSprites();
     }
 
     UpdateTexture(texture, buffer);
-    DrawTexturePro(texture, new Rectangle(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT), new Rectangle(960 / 2, 0, VIEWPORT_WIDTH * 3, VIEWPORT_HEIGHT * 3), Vector2.Zero, 0f, Color.White);
+    DrawTexturePro(texture, new Rectangle(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT), new Rectangle((ACTUAL_SCREEN_WIDTH - VIEWPORT_WIDTH * 3) / 2, 0, VIEWPORT_WIDTH * 3, VIEWPORT_HEIGHT * 3), Vector2.Zero, 0f, Color.White);
 
-    //DrawVector(player, dir, Color.Yellow);
-    DrawFPS(SCREEN_WIDTH - 120, 10);
-    DrawText($"soundDistance={soundDistance:F3} soundAttenuation={soundAttenuation:F3}", SCREEN_WIDTH - 300, 30, 12, Color.Green);
-    //DrawText($"x={player.X:F3} y={player.Y:F3}", SCREEN_WIDTH - 100, 30, 12, Color.Green);
+    DrawFPS(ACTUAL_SCREEN_WIDTH - 120, 10);
+    //DrawText($"soundDistance={soundDistance:F3} soundAttenuation={soundAttenuation:F3}", SCREEN_WIDTH - 300, 30, 12, Color.Green);
+    DrawText($"x={player.X:F3} y={player.Y:F3}", ACTUAL_SCREEN_WIDTH - 100, 30, 12, Color.Green);
     EndDrawing();
 }
 
-Raylib.UnloadImage(textureWall);
-Raylib.UnloadImage(textureWall2);
-Raylib.UnloadImage(textureWall3);
-Raylib.UnloadImage(textureWall4);
-Raylib.UnloadImage(textureFloor1);
-Raylib.UnloadImage(textureFloor2);
-Raylib.UnloadTexture(texture);
+UnloadImage(textureWall);
+UnloadImage(textureWall2);
+UnloadImage(textureWall3);
+UnloadImage(textureWall4);
+UnloadImage(textureFloor1);
+UnloadImage(textureFloor2);
+UnloadImage(textureFloor3);
+UnloadImage(textureSprite1);
+UnloadTexture(texture);
 UnloadSound(sound);
 CloseAudioDevice();
 CloseWindow();
 
+void RenderSprites()
+{
+    // TODO use built in functions for matrix projection
+    sprites.Sort((Vector2 v1, Vector2 v2) =>
+    {
+        var d1 = Vector2.Distance(v1, player);
+        var d2 = Vector2.Distance(v2, player);
+        return (d1 <= d2) ? 1 : -1;
+    });
+
+    for (int i = 0; i < sprites.Length; i++)
+    {
+        var sprite = sprites[i] - player;
+
+        // inverse camera matrix
+        double invDet = 1f / (plane.X * dir.Y - dir.X * plane.Y);
+        double transformX = invDet * (dir.Y * sprite.X - dir.X * sprite.Y);
+        double transformY = invDet * (-plane.Y * sprite.X + plane.X * sprite.Y);
+
+        int spriteScreenX = (int)((VIEWPORT_WIDTH / 2) * (1 + transformX / transformY));
+
+        // height of sprite
+        int spriteHeight = Math.Abs((int)(VIEWPORT_HEIGHT / transformY));
+        int drawStartY = -spriteHeight / 2 + VIEWPORT_HEIGHT / 2 + cameraYPosition;
+        if (drawStartY < 0) drawStartY = 0;
+        int drawEndY = spriteHeight / 2 + VIEWPORT_HEIGHT / 2 + cameraYPosition;
+        if (drawEndY > VIEWPORT_HEIGHT) drawEndY = VIEWPORT_HEIGHT - 1;
+
+        // width of sprite
+        int spriteWidth = spriteHeight; // is this assuming square sprites ?
+        int drawStartX = -spriteWidth / 2 + spriteScreenX;
+        if (drawStartX < 0) drawStartX = 0;
+        int drawEndX = spriteWidth / 2 + spriteScreenX;
+        if (drawEndX > VIEWPORT_WIDTH) drawEndX = VIEWPORT_WIDTH - 1;
+
+        // texture mapping
+        for (int stripe = drawStartX; stripe < drawEndX; stripe++)
+        {
+            int texX = (stripe - (-spriteWidth / 2 + spriteScreenX))
+               * textureSprite1.Width / spriteWidth;
+
+            if (transformY > 0 && stripe > 0 && stripe < VIEWPORT_WIDTH && transformY < perpendicularDistanceBuffer[stripe])
+            {
+                for (int y = drawStartY; y < drawEndY; y++)
+                {
+                    int d = (y - cameraYPosition) * 256 - (VIEWPORT_HEIGHT) * 128 + spriteHeight * 128;
+                    int texY = (d * textureSprite1.Height / spriteHeight) / 256;
+                    var color = GetImageColor(textureSprite1, texX, texY);
+                    if (color != Color.Black)  // black as transparency color
+                    {
+                        if (shouldRenderFog)
+                        {
+                            color = ColorLerp(color, fogColor, 0.2f + MathF.Pow((float)MathF.Min((float)sprite.Length(), maxDistanceFog) / maxDistanceFog, 2));
+                        }
+
+                        buffer[VIEWPORT_WIDTH * y + stripe] = color;
+                    }
+                }
+            }
+        }
+    }
+}
 
 void UpdateSoundPosition()
 {
-    // need more realistic function and also add attenuation based on raycasting for wall inbetween
-    // need code for sound pan
+    // TODO need more realistic function and also add attenuation based on raycasting for wall inbetween
+    // TODO need code for sound pan
     var maxDistance = 8f;
-    Vector2 soundLocation = new Vector2(20, 20);
+    Vector2 soundLocation = new Vector2(20f, 10.5f);
     var directDistance = (player - soundLocation).Length();
     soundDistance = directDistance;
     float attenuation = 1 - MathF.Pow(MathF.Min((float)directDistance, maxDistance) / maxDistance, 2);
@@ -216,7 +278,6 @@ void UpdateSoundPosition()
 bool TryMove(Vector2 delta, float radius)
 {
     bool blocked = false;
-
     if (delta.X != 0)
     {
         float edgeX = player.X + delta.X + Math.Sign(delta.X) * radius;
@@ -238,7 +299,7 @@ bool TryMove(Vector2 delta, float radius)
     return !blocked;
 }
 
-void RenderFloorAndCeiling()
+void RenderFloorAndCeiling(double dt)
 {
     // floorcasting
     int horizon = VIEWPORT_HEIGHT / 2 + cameraYPosition;
@@ -263,6 +324,7 @@ void RenderFloorAndCeiling()
         float floorY = player.Y + rowDistance * rayDir0.Y;
 
         Vector2 dist = new Vector2(floorX, floorY) - player;
+        var fogPerRow = 0.2f + MathF.Pow(MathF.Min((float)dist.Length(), maxDistanceFog) / maxDistanceFog, 2);
 
         Span<Color> row = buffer.AsSpan(start: y * VIEWPORT_WIDTH, length: VIEWPORT_WIDTH);
         for (int x = 0; x < row.Length; x++)
@@ -270,11 +332,6 @@ void RenderFloorAndCeiling()
 
             int cellX = (int)floorX;
             int cellY = (int)floorY;
-
-            //int tx = (int)(floorTexW * (floorX - cellX)) % floorTexW;
-            //int ty = (int)(floorTexH * (floorY - cellY)) % floorTexH;
-            int tx = (int)(floorX * floorTexW) & (floorTexW - 1);   // if text are 64x64 only
-            int ty = (int)(floorY * floorTexH) & (floorTexH - 1);
 
             floorX += floorStepX;
             floorY += floorStepY;
@@ -293,21 +350,29 @@ void RenderFloorAndCeiling()
 
             }
 
+            int tx = (int)(floorX * floorTexW) & (floorTexW - 1);   // if text are 64x64 only
+            int ty = (int)(floorY * floorTexH) & (floorTexH - 1);
+
+            // ceiling movement
+            //if (textureFllor == textureColors3)
+            //{
+            //    textureOffsetCeiling += dt * 0.00001f;
+            //    tx = (int)((floorX + textureOffsetCeiling) * floorTexW) & (floorTexW - 1);
+            //    ty = (int)((floorY + textureOffsetCeiling) * floorTexH) & (floorTexH - 1);
+            //}
+
             var color = textureFllor[ty * floorTexW + tx];
 
             // fog
             if (shouldRenderFog)
             {
-                color = ColorLerp(color, fogColor, 0.2f + MathF.Pow(MathF.Min((float)dist.Length(), maxDistanceFog) / maxDistanceFog, 2));
+                color = ColorLerp(color, fogColor, fogPerRow);
             }
 
             row[x] = y > horizon ? new Color(color.R / 2, color.G / 2, color.B / 2) : color;
-
-
         }
     }
 }
-
 
 void RenderWalls()
 {
@@ -391,16 +456,24 @@ void RenderWalls()
         double wallX;
         if (side == 0) wallX = player.Y + wallDistance * rayVector.Y; else wallX = player.X + wallDistance * rayVector.X;
         wallX -= Math.Floor(wallX);
-        // x coordinate on the texture
         int texW = textureWall.Width;
         int texH = textureWall.Height;
 
+        // x coordinate on the texture
         int textX = (int)(wallX * texW);
         if (side == 0 && rayVector.X > 0) textX = texW - textX - 1;
         if (side == 1 && rayVector.Y < 0) textX = texW - textX - 1;
 
+        // wall movement
+        if (MapAt(mapX, mapY) == 3)
+        {
+            int offsetPixels = (int)(textureOffsetWall * texW);
+            textX = (textX + offsetPixels) % texW;
+        }
+
         double step = 1.0 * texH / lineHeight;
         double texPos = (wallStartPixel - VIEWPORT_HEIGHT / 2 + lineHeight / 2 - cameraYPosition) * step;
+        float fogPerStripe = 0.2f + MathF.Pow((float)MathF.Min((float)wallDistance, maxDistanceFog) / maxDistanceFog, 2);
 
         for (int i = wallStartPixel; i < wallEndPixel; i++)
         {
@@ -412,12 +485,13 @@ void RenderWalls()
             // fog here
             if (shouldRenderFog)
             {
-                color = ColorLerp(color, fogColor, 0.2f + MathF.Pow((float)MathF.Min((float)wallDistance, maxDistanceFog) / maxDistanceFog, 2));
+                color = ColorLerp(color, fogColor, fogPerStripe);
             }
 
             buffer[i * VIEWPORT_WIDTH + x] = color;
         }
         columnsPerRow[x] = new Vector2(wallStartPixel, wallEndPixel);
+        perpendicularDistanceBuffer[x] = wallDistance;
     }
 }
 

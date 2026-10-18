@@ -33,6 +33,9 @@
     <None Update="resources\SLIME_1A.PNG">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="resources\barrel.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="resources\coin.wav">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
